@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semka Photoshop — редактор изображений на Python</title>
+<style>
+    :root {
+        --bg-dark: #1e1e1e;
+        --bg-main: #2a2a2a;
+        --bg-panel: #2e2e2e;
+        --bg-toolbar: #303030;
+        --bg-button: #3a3a3a;
+        --bg-button-hover: #4a4a4a;
+        --bg-code: #252525;
+        --border-dark: #1a1a1a;
+        --border-mid: #444444;
+        --text-main: #c8c8c8;
+        --text-dim: #9a9a9a;
+        --text-bright: #ffffff;
+        --accent-blue: #5a9ee0;
+        --accent-blue-hover: #7ab6ee;
+        --accent-blue-dark: #3a5a80;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+    }
+
+    /* ===== ХЕДЕР ===== */
+    header {
+        background-color: var(--bg-toolbar);
+        border-bottom: 1px solid var(--border-dark);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .nav {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--text-bright);
+        letter-spacing: 0.5px;
+    }
+
+    .logo span { color: var(--accent-blue); }
+
+    .nav-links {
+        display: flex;
+        gap: 28px;
+        list-style: none;
+        align-items: center;
+    }
+
+    .nav-links a {
+        color: var(--text-main);
+        text-decoration: none;
+        font-size: 15px;
+        transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent-blue); }
+
+    .nav-download {
+        color: var(--accent-blue) !important;
+        font-weight: 600;
+    }
+
+    /* ===== ГЕРОЙ ===== */
+    .hero {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 100px 24px 80px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 60px;
+        align-items: center;
+    }
+
+    .hero-text h1 {
+        font-size: 52px;
+        font-weight: bold;
+        color: var(--text-bright);
+        margin-bottom: 20px;
+        line-height: 1.15;
+    }
+
+    .hero-text h1 span { color: var(--accent-blue); }
+
+    .hero-text p {
+        font-size: 18px;
+        color: var(--text-dim);
+        margin-bottom: 32px;
+        max-width: 520px;
+    }
+
+    .hero-buttons {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 14px 28px;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .btn-primary {
+        background-color: var(--accent-blue-dark);
+        color: var(--text-bright);
+        border-color: var(--accent-blue);
+    }
+
+    .btn-primary:hover {
+        background-color: var(--accent-blue);
+        border-color: var(--accent-blue-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background-color: var(--bg-button);
+        color: var(--text-main);
+        border-color: var(--border-mid);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--bg-button-hover);
+        border-color: #666666;
+    }
+
+    /* Превью редактора */
+    .hero-preview {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-dark);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .preview-toolbar {
+        background-color: var(--bg-toolbar);
+        padding: 10px 14px;
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid var(--border-dark);
+    }
+
+    .preview-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #4a4a4a;
+    }
+
+    .preview-body {
+        display: grid;
+        grid-template-columns: 90px 1fr 90px;
+        height: 320px;
+    }
+
+    .preview-side {
+        background-color: var(--bg-panel);
+        padding: 12px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .preview-side.left { border-right: 1px solid var(--border-dark); }
+    .preview-side.right { border-left: 1px solid var(--border-dark); }
+
+    .preview-btn {
+        background-color: var(--bg-button);
+        border: 1px solid var(--border-mid);
+        border-radius: 4px;
+        height: 24px;
+    }
+
+    .preview-btn.accent {
+        background-color: var(--accent-blue-dark);
+        border-color: var(--accent-blue);
+    }
+
+    .preview-canvas {
+        background-color: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image:
+            linear-gradient(45deg, #3a3a3a 25%, transparent 25%),
+            linear-gradient(-45deg, #3a3a3a 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #3a3a3a 75%),
+            linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        position: relative;
+    }
+
+    .preview-selection {
+        width: 140px;
+        height: 100px;
+        border: 2px dashed var(--text-bright);
+        position: relative;
+    }
+
+    .preview-selection::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border: 2px dashed #000000;
+    }
+
+    /* ===== СЕКЦИИ ===== */
+    section { padding: 80px 24px; }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    .section-title {
+        font-size: 34px;
+        font-weight: bold;
+        color: var(--text-bright);
+        margin-bottom: 12px;
+        text-align: center;
+    }
+
+    .section-subtitle {
+        font-size: 16px;
+        color: var(--text-dim);
+        text-align: center;
+        margin-bottom: 56px;
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* ===== БЛОК СКАЧИВАНИЯ ===== */
+    .download-block {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--accent-blue-dark);
+        border-radius: 12px;
+        padding: 48px 40px;
+        max-width: 780px;
+        margin: 0 auto;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(58, 90, 128, 0.2);
+    }
+
+    .download-block h3 {
+        font-size: 26px;
+        color: var(--text-bright);
+        margin-bottom: 14px;
+    }
+
+    .download-block p {
+        color: var(--text-dim);
+        font-size: 15px;
+        margin-bottom: 28px;
+        max-width: 520px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .download-meta {
+        display: flex;
+        justify-content: center;
+        gap: 32px;
+        margin-top: 28px;
+        flex-wrap: wrap;
+    }
+
+    .download-meta div {
+        color: var(--text-dim);
+        font-size: 14px;
+    }
+
+    .download-meta strong {
+        color: var(--text-bright);
+        display: block;
+        font-size: 15px;
+        margin-bottom: 2px;
+    }
+
+    /* ===== ВОЗМОЖНОСТИ ===== */
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .feature-card {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-dark);
+        border-radius: 8px;
+        padding: 28px 24px;
+        transition: all 0.25s;
+    }
+
+    .feature-card:hover {
+        border-color: var(--accent-blue-dark);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .feature-icon {
+        width: 44px;
+        height: 44px;
+        background-color: var(--accent-blue-dark);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-bright);
+        font-weight: bold;
+        font-size: 20px;
+        margin-bottom: 18px;
+    }
+
+    .feature-card h3 {
+        font-size: 18px;
+        color: var(--text-bright);
+        margin-bottom: 10px;
+    }
+
+    .feature-card p {
+        font-size: 14px;
+        color: var(--text-dim);
+    }
+
+    /* ===== ФУНКЦИИ ===== */
+    .functions-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 12px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .function-item {
+        background-color: var(--bg-panel);
+        border-left: 3px solid var(--accent-blue);
+        padding: 16px 20px;
+        border-radius: 4px;
+        font-size: 15px;
+    }
+
+    .function-item strong {
+        color: var(--text-bright);
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .function-item span {
+        color: var(--text-dim);
+        font-size: 14px;
+    }
+
+    /* ===== ИНСТРУКЦИЯ ===== */
+    .install-block {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-dark);
+        border-radius: 10px;
+        padding: 40px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .install-step { margin-bottom: 32px; }
+    .install-step:last-child { margin-bottom: 0; }
+
+    .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: var(--accent-blue-dark);
+        color: var(--text-bright);
+        font-weight: bold;
+        font-size: 14px;
+        margin-right: 12px;
+        vertical-align: middle;
+    }
+
+    .step-title {
+        font-size: 18px;
+        color: var(--text-bright);
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    .install-step p {
+        margin-top: 12px;
+        margin-left: 40px;
+        color: var(--text-dim);
+        font-size: 14px;
+    }
+
+    .code-block {
+        background-color: var(--bg-code);
+        border: 1px solid var(--border-dark);
+        border-radius: 6px;
+        padding: 16px 20px;
+        margin-top: 12px;
+        margin-left: 40px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 14px;
+        color: var(--accent-blue);
+        overflow-x: auto;
+    }
+
+    /* ===== ГОРЯЧИЕ КЛАВИШИ ===== */
+    .shortcuts-table {
+        width: 100%;
+        max-width: 700px;
+        margin: 0 auto;
+        border-collapse: collapse;
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-dark);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .shortcuts-table th,
+    .shortcuts-table td {
+        padding: 14px 20px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-dark);
+        font-size: 15px;
+    }
+
+    .shortcuts-table th {
+        background-color: var(--bg-toolbar);
+        color: var(--text-bright);
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+    }
+
+    .shortcuts-table tr:last-child td { border-bottom: none; }
+
+    .shortcuts-table td:first-child {
+        color: var(--accent-blue);
+        font-family: 'Consolas', monospace;
+        font-weight: 600;
+        width: 40%;
+    }
+
+    .shortcuts-table td:last-child { color: var(--text-main); }
+
+    /* ===== CTA ===== */
+    .cta {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-dark);
+        border-radius: 12px;
+        padding: 60px 40px;
+        text-align: center;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .cta h2 {
+        font-size: 32px;
+        color: var(--text-bright);
+        margin-bottom: 16px;
+    }
+
+    .cta p {
+        color: var(--text-dim);
+        font-size: 17px;
+        margin-bottom: 32px;
+        max-width: 560px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* ===== ФУТЕР ===== */
+    footer {
+        background-color: var(--bg-toolbar);
+        border-top: 1px solid var(--border-dark);
+        padding: 40px 24px;
+        margin-top: 60px;
+    }
+
+    .footer-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .footer-text {
+        color: var(--text-dim);
+        font-size: 14px;
+    }
+
+    .footer-text span { color: var(--accent-blue); }
+
+    .footer-links {
+        display: flex;
+        gap: 24px;
+    }
+
+    .footer-links a {
+        color: var(--text-dim);
+        text-decoration: none;
+        font-size: 14px;
+        transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--accent-blue); }
+
+    /* ===== АДАПТИВ ===== */
+    @media (max-width: 900px) {
+        .hero {
+            grid-template-columns: 1fr;
+            padding: 60px 24px 40px;
+            gap: 40px;
+        }
+        .hero-text h1 { font-size: 36px; }
+        .nav-links { display: none; }
+        .section-title { font-size: 26px; }
+        .cta { padding: 40px 24px; }
+        .cta h2 { font-size: 24px; }
+        .install-block { padding: 24px; }
+        .code-block, .install-step p { margin-left: 0; }
+        .download-block { padding: 32px 20px; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ===== ХЕДЕР ===== -->
+<header>
+    <nav class="nav">
+        <div class="logo">Semka <span>Photoshop</span></div>
+        <ul class="nav-links">
+            <li><a href="#download" class="nav-download">Скачать</a></li>
+            <li><a href="#features">Возможности</a></li>
+            <li><a href="#functions">Функции</a></li>
+            <li><a href="#shortcuts">Клавиши</a></li>
+        </ul>
+    </nav>
+</header>
+
+<!-- ===== ГЕРОЙ ===== -->
+<section class="hero">
+    <div class="hero-text">
+        <h1>Редактор изображений <span>Semka Photoshop</span></h1>
+        <p>
+            Полноценный графический редактор на Python с поддержкой слоёв,
+            выделения, фильтров и профессиональных корректировок.
+            Скачай готовый .exe — работает без Python.
+        </p>
+        <div class="hero-buttons">
+            <a href="Semka-Photoshop.exe" download class="btn btn-primary">Скачать .exe</a>
+            <a href="#functions" class="btn btn-secondary">Все функции</a>
+        </div>
+    </div>
+
+    <div class="hero-preview">
+        <div class="preview-toolbar">
+            <div class="preview-dot"></div>
+            <div class="preview-dot"></div>
+            <div class="preview-dot"></div>
+        </div>
+        <div class="preview-body">
+            <div class="preview-side left">
+                <div class="preview-btn accent"></div>
+                <div class="preview-btn"></div>
+                <div class="preview-btn"></div>
+                <div class="preview-btn"></div>
+                <div class="preview-btn"></div>
+                <div class="preview-btn"></div>
+                <div class="preview-btn"></div>
+            </div>
+            <div class="preview-canvas">
+                <div class="preview-selection"></div>
+            </div>
+            <div class="preview-side right">
+                <div class="preview-btn"></div>
+                <div class="preview-btn"></div>
+                <div class="preview-btn"></div>
+                <div class="preview-btn accent"></div>
+                <div class="preview-btn"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== СКАЧИВАНИЕ ===== -->
+<section id="download" style="background-color: var(--bg-dark);">
+    <div class="container">
+        <h2 class="section-title">Скачать редактор</h2>
+        <p class="section-subtitle">
+            Один файл — запускается без установки Python.
+        </p>
+
+        <div class="download-block">
+            <h3>Semka Photoshop.exe</h3>
+            <p>
+                Готовый исполняемый файл для Windows. Просто скачай, запусти
+                и начни редактировать изображения.
+            </p>
+
+            <a href="Semka-Photoshop.exe" download class="btn btn-primary"
+               style="padding: 16px 40px; font-size: 17px;">
+                Скачать для Windows
+            </a>
+
+            <div class="download-meta">
+                <div>
+                    <strong>Платформа</strong>
+                    Windows 10 / 11
+                </div>
+                <div>
+                    <strong>Формат</strong>
+                    .exe
+                </div>
+                <div>
+                    <strong>Зависимости</strong>
+                    Не требуются
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ВОЗМОЖНОСТИ ===== -->
+<section id="features">
+    <div class="container">
+        <h2 class="section-title">Возможности</h2>
+        <p class="section-subtitle">
+            Редактор объединяет простоту использования с профессиональным
+            набором инструментов для работы с изображениями.
+        </p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">S</div>
+                <h3>Многослойность</h3>
+                <p>Добавляйте, дублируйте и удаляйте слои. Управляйте видимостью,
+                непрозрачностью и режимами наложения.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">V</div>
+                <h3>Умное выделение</h3>
+                <p>Прямоугольник, эллипс, лассо и магнитное выделение для работы
+                с объектами сложной формы.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">M</div>
+                <h3>Перемещение фрагментов</h3>
+                <p>Выделите область правой кнопкой, перенесите её левой —
+                фрагмент отрывается от слоя и оставляет прозрачность.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">F</div>
+                <h3>Фильтры и эффекты</h3>
+                <p>Размытие, резкость, контур, рельеф, поиск краёв, медиана,
+                сглаживание и многое другое.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">C</div>
+                <h3>Корректировки</h3>
+                <p>Яркость, контраст, насыщенность, гамма, постеризация,
+                авто-уровни, авто-контраст, сепия.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">H</div>
+                <h3>История и отмена</h3>
+                <p>Полная история действий с возможностью отката в любую точку
+                через Ctrl+Z или клик в панели истории.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ФУНКЦИИ ===== -->
+<section id="functions" style="background-color: var(--bg-dark);">
+    <div class="container">
+        <h2 class="section-title">Полный список функций</h2>
+        <p class="section-subtitle">
+            Всё, что доступно в редакторе — от базовых инструментов
+            до продвинутых операций.
+        </p>
+
+        <div class="functions-list">
+            <div class="function-item">
+                <strong>Инструменты рисования</strong>
+                <span>Кисть, ластик, линия, пипетка, заливка. Настройка размера и цвета.</span>
+            </div>
+            <div class="function-item">
+                <strong>Выделение</strong>
+                <span>Прямоугольник, эллипс, лассо, магнитное выделение (обводка контура).</span>
+            </div>
+            <div class="function-item">
+                <strong>Работа с выделением</strong>
+                <span>Копирование, вырезание, вставка, инверсия, слой из выделения, обрезка.</span>
+            </div>
+            <div class="function-item">
+                <strong>Слои</strong>
+                <span>Создание, дублирование, удаление, объединение, видимость, непрозрачность.</span>
+            </div>
+            <div class="function-item">
+                <strong>Режимы наложения</strong>
+                <span>Normal, Multiply, Screen, Overlay, Soft Light, Hard Light, Difference, Darken, Lighten, Add.</span>
+            </div>
+            <div class="function-item">
+                <strong>Корректировки</strong>
+                <span>Яркость, контраст, насыщенность, гамма, постеризация, сепия, Ч/Б.</span>
+            </div>
+            <div class="function-item">
+                <strong>Фильтры</strong>
+                <span>Размытие по Гауссу, размытие по рамке, медиана, резкость, контур, рельеф, поиск краёв.</span>
+            </div>
+            <div class="function-item">
+                <strong>Трансформации</strong>
+                <span>Поворот на 90°, отражение по горизонтали и вертикали, изменение размера.</span>
+            </div>
+            <div class="function-item">
+                <strong>Масштабирование</strong>
+                <span>Зум колёсиком мыши, кнопки 100% / увеличить / уменьшить.</span>
+            </div>
+            <div class="function-item">
+                <strong>История</strong>
+                <span>Панель действий, отмена, повтор, переход к любой точке истории.</span>
+            </div>
+            <div class="function-item">
+                <strong>Файлы</strong>
+                <span>Открытие PNG, JPG, BMP, GIF, TIFF, WebP. Сохранение в PNG, JPG, BMP, WebP.</span>
+            </div>
+            <div class="function-item">
+                <strong>Drag and Drop</strong>
+                <span>Перетаскивание файла прямо в окно редактора.</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ИНСТРУКЦИЯ ===== -->
+<section id="howto">
+    <div class="container">
+        <h2 class="section-title">Как запустить</h2>
+        <p class="section-subtitle">
+            Три простых шага — и можно работать.
+        </p>
+
+        <div class="install-block">
+            <div class="install-step">
+                <span class="step-number">1</span>
+                <span class="step-title">Скачай файл</span>
+                <p>Нажми кнопку «Скачать .exe» — файл Semka-Photoshop.exe сохранится в папку «Загрузки».</p>
+            </div>
+
+            <div class="install-step">
+                <span class="step-number">2</span>
+                <span class="step-title">Запусти .exe</span>
+                <p>Двойной клик по файлу. Если Windows предупредит о неизвестном издателе —
+                нажми «Подробнее» → «Выполнить в любом случае».</p>
+            </div>
+
+            <div class="install-step">
+                <span class="step-number">3</span>
+                <span class="step-title">Начни редактировать</span>
+                <p>Перетащи картинку в окно редактора или открой через меню Файл → Открыть.
+                Управление: ПКМ — выделение, ЛКМ внутри — тащить, колесо — зум.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ГОРЯЧИЕ КЛАВИШИ ===== -->
+<section id="shortcuts" style="background-color: var(--bg-dark);">
+    <div class="container">
+        <h2 class="section-title">Горячие клавиши</h2>
+        <p class="section-subtitle">
+            Быстрый доступ ко всем основным действиям.
+        </p>
+
+        <table class="shortcuts-table">
+            <thead>
+                <tr>
+                    <th>Сочетание</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>V</td><td>Инструмент «Перемещение»</td></tr>
+                <tr><td>B</td><td>Кисть</td></tr>
+                <tr><td>E</td><td>Ластик</td></tr>
+                <tr><td>L</td><td>Линия</td></tr>
+                <tr><td>I</td><td>Пипетка</td></tr>
+                <tr><td>M</td><td>Выделение (прямоугольник)</td></tr>
+                <tr><td>Ctrl + O</td><td>Открыть изображение</td></tr>
+                <tr><td>Ctrl + S</td><td>Сохранить как</td></tr>
+                <tr><td>Ctrl + Z</td><td>Отменить</td></tr>
+                <tr><td>Ctrl + Y</td><td>Повторить</td></tr>
+                <tr><td>Ctrl + A</td><td>Выделить всё</td></tr>
+                <tr><td>Ctrl + D</td><td>Снять выделение</td></tr>
+                <tr><td>Ctrl + C</td><td>Копировать выделение</td></tr>
+                <tr><td>Ctrl + X</td><td>Вырезать выделение</td></tr>
+                <tr><td>Ctrl + V</td><td>Вставить</td></tr>
+                <tr><td>Ctrl + J</td><td>Слой из выделения</td></tr>
+                <tr><td>Ctrl + E</td><td>Объединить все слои</td></tr>
+                <tr><td>Ctrl + Shift + N</td><td>Новый слой</td></tr>
+                <tr><td>Ctrl + + / − / 0</td><td>Зум / 100%</td></tr>
+                <tr><td>Esc</td><td>Отменить перемещение / снять выделение</td></tr>
+                <tr><td>Колесо мыши</td><td>Масштабирование</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section>
+    <div class="container">
+        <div class="cta">
+            <h2>Готовы попробовать?</h2>
+            <p>
+                Semka Photoshop — открытый редактор изображений,
+                который легко расширять и настраивать под свои задачи.
+            </p>
+            <a href="Semka-Photoshop.exe" download class="btn btn-primary">Скачать .exe</a>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ФУТЕР ===== -->
+<footer>
+    <div class="footer-content">
+        <div class="footer-text">
+            Semka <span>Photoshop</span> © 2024. Редактор изображений на Python.
+        </div>
+        <div class="footer-links">
+            <a href="#download">Скачать</a>
+            <a href="#features">Возможности</a>
+            <a href="#functions">Функции</a>
+            <a href="#shortcuts">Клавиши</a>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
